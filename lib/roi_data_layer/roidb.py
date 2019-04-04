@@ -22,7 +22,7 @@ def prepare_roidb(imdb):
   if not (imdb.name.startswith('coco')):
     sizes = [PIL.Image.open(imdb.image_path_at(i)).size
          for i in range(imdb.num_images)]
-         
+
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
@@ -49,8 +49,8 @@ def prepare_roidb(imdb):
 def rank_roidb_ratio(roidb):
     # rank roidb based on the ratio between width and height.
     ratio_large = 2 # largest ratio to preserve.
-    ratio_small = 0.5 # smallest ratio to preserve.    
-    
+    ratio_small = 0.5 # smallest ratio to preserve.
+
     ratio_list = []
     for i in range(len(roidb)):
       width = roidb[i]['width']
@@ -62,7 +62,7 @@ def rank_roidb_ratio(roidb):
         ratio = ratio_large
       elif ratio < ratio_small:
         roidb[i]['need_crop'] = 1
-        ratio = ratio_small        
+        ratio = ratio_small
       else:
         roidb[i]['need_crop'] = 0
 
@@ -104,10 +104,11 @@ def combined_roidb(imdb_names, training=True):
     print('done')
 
     return imdb.roidb
-  
+
   def get_roidb(imdb_name):
     imdb = get_imdb(imdb_name)
     print('Loaded dataset `{:s}` for training'.format(imdb.name))
+    # PROPOSAL_METHOD: gt
     imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
     print('Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD))
     roidb = get_training_roidb(imdb)
