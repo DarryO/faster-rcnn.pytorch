@@ -3,10 +3,12 @@
 
 import glob
 import os
+import numpy as np
 
 import torch
 from setuptools import find_packages
 from setuptools import setup
+from setuptools import Extension
 from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
 from torch.utils.cpp_extension import CUDAExtension
@@ -14,7 +16,7 @@ from torch.utils.cpp_extension import CUDAExtension
 requirements = ["torch", "torchvision"]
 
 
-def get_extensions():
+def get_nvcc_ext():
     this_dir = os.path.dirname(os.path.abspath(__file__))
     extensions_dir = os.path.join(this_dir, "model", "csrc")
 
@@ -42,19 +44,31 @@ def get_extensions():
     sources = [os.path.join(extensions_dir, s) for s in sources]
 
     include_dirs = [extensions_dir]
-
-    ext_modules = [
-        extension(
+    return extension(
             "model._C",
             sources,
             include_dirs=include_dirs,
             define_macros=define_macros,
             extra_compile_args=extra_compile_args,
         )
+
+def get_coco_ext():
+    return Extension(
+            'pycocotools._mask',
+            sources=['pycocotools/maskApi.c', 'pycocotools/_mask.pyx'],
+            include_dirs = [np.get_include(), 'pycocotools'],
+            extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],
+        )
+
+
+def get_extensions():
+
+    ext_modules = [
+        get_nvcc_ext(),
+        get_coco_ext()
     ]
 
     return ext_modules
-
 
 setup(
     name="faster_rcnn",
