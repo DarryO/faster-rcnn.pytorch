@@ -32,9 +32,9 @@ class vgg16(_fasterRCNN):
         state_dict = torch.load(self.model_path)
         vgg.load_state_dict({k:v for k,v in state_dict.items() if k in vgg.state_dict()})
 
+    # not using the last Linear layer: in 4096, out 1000
     vgg.classifier = nn.Sequential(*list(vgg.classifier._modules.values())[:-1])
 
-    # not using the last maxpool layer
     self.RCNN_base = nn.Sequential(*list(vgg.features._modules.values())[:-1])
 
     # Fix the layers before conv3:
@@ -51,10 +51,10 @@ class vgg16(_fasterRCNN):
     if self.class_agnostic:
       self.RCNN_bbox_pred = nn.Linear(4096, 4)
     else:
-      self.RCNN_bbox_pred = nn.Linear(4096, 4 * self.n_classes)      
+      self.RCNN_bbox_pred = nn.Linear(4096, 4 * self.n_classes)
 
   def _head_to_tail(self, pool5):
-    
+
     pool5_flat = pool5.view(pool5.size(0), -1)
     fc7 = self.RCNN_top(pool5_flat)
 
