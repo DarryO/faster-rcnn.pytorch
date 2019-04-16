@@ -30,7 +30,7 @@ class kitti(imdb):
         self._classes = ('__background__',  # always index 0
                          'car', 'van', 'truck',
                          'pedestrian', 'person_sitting', 'cyclist', 'tram',
-                         'misc', 'dontCare', 'otherdynamic'
+                         'misc', 'dontcare', 'otherdynamic'
                          )
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.png'
@@ -56,7 +56,7 @@ class kitti(imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(cfg.DATA_DIR, 'fabu_data')
+        return os.path.join(cfg.DATA_DIR, 'kitti')
 
     def image_path_at(self, i):
         """
