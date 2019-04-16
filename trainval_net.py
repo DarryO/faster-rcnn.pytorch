@@ -219,7 +219,6 @@ if __name__ == '__main__':
     #   flipped
     # ratio_list: sorted ratio list
     imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
-    print(ratio_list)
     train_size = len(roidb)
 
     print('{:d} roidb entries'.format(len(roidb)))
