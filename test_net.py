@@ -128,11 +128,11 @@ if __name__ == '__main__':
     elif args.dataset == "kitti":
         args.imdb_name = "kitti_train"
         args.imdbval_name = "kitti_val"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32, 64, 128]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     elif args.dataset == "fabu":
         args.imdb_name = "fabu_train"
         args.imdbval_name = "fabu_val"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32, 64, 128]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     else:
         raise ValueError("??")
 
