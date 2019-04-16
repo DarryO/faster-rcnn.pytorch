@@ -202,3 +202,4 @@ caffe2.egg-info
 lib/model/utils/bbox.c
 lib/pycocotools/_mask.c
 models
+output
