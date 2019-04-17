@@ -37,10 +37,19 @@ class _fasterRCNN(nn.Module):
         # gt_boxes: [batch, MAX_NUM_GTBOX, 5] (x1, y1, x2, y2, cls)
         # gt_boxes: [batch, MAX_NUM_GTBOX, 13] (x1, y1, x2, y2, cls, cx, cy, cz, height, width, length, alpha, ry)
         batch_size = im_data.size(0)
+        print(gt_boxes.size())
         if gt_boxes.dim() == 2:
+            gt_alphas = gt_boxes[:, 11]
+            gt_rys = gt_boxes[:, 12]
             gt_boxes = gt_boxes[:, :5]
+            gt_loc = gt_boxes[:, 5:8]
+            gt_dim = gt_boxes[:, 8:11]
         else:
+            gt_alphas = gt_boxes[:, :, 11]
+            gt_rys = gt_boxes[:, :, 12]
             gt_boxes = gt_boxes[:, :, :5]
+            gt_loc = gt_boxes[:, :, 5:8]
+            gt_dim = gt_boxes[:, :, 8:11]
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
@@ -57,7 +66,7 @@ class _fasterRCNN(nn.Module):
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(
-                    rois, gt_boxes, num_boxes)
+                    rois, gt_boxes, num_boxes, gt_loc, gt_dim, gt_alphas, gt_rys)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
             rois_label = Variable(rois_label.view(-1).long())
@@ -88,8 +97,11 @@ class _fasterRCNN(nn.Module):
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
         dim_offset_pred = self.RCNN_dim_offset_pred(pooled_feat)
         loc_offset_pred = self.RCNN_loc_offset_pred(pooled_feat)
+        num_classes = self.mean_dim.size(0)
+        num_rois = bbox_pred.size(0)
 
         def target_select(all_class_pred, label, num_feat):
+            # all_class_pred: [xx, num_class, num_feat]
             all_class_view = all_class_pred.view(all_class_pred.size(0), int(all_class_pred.size(1) / num_feat), num_feat)
             target_pred_select = torch.gather(all_class_view, 1, label.view(label.size(0), 1, 1).expand(label.size(0), 1, num_feat))
             target_pred = target_pred_select.squeeze(1)
@@ -101,14 +113,23 @@ class _fasterRCNN(nn.Module):
             bbox_pred = target_select(bbox_pred, rois_label, 4)
             dim_offset_pred = target_select(dim_offset_pred, rois_label, 3)
             loc_offset_pred = target_select(loc_offset_pred, rois_label, 3)
+            expanded_mean_dim = self.mean_dim.view(1, num_classes * 3).expand(num_rois, num_classes * 3)
+            target_mean_dim = target_select(expanded_mean_dim, rois_label, 3)
 
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
+        print(dim_offset_pred.size(), target_mean_dim.size())
 
         alpha_pred = self.RCNN_alpha_pred(pooled_feat)
         ry_pred = self.RCNN_ry_pred(pooled_feat)
 
+        print(alpha_pred.size(), gt_alphas.size())
+        print(ry_pred.size(), gt_rys.size())
+
+        print(cls_score.size(), bbox_pred.size(), rois_target.size())
+
+        exit()
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
 

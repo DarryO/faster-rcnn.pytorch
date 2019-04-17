@@ -189,8 +189,8 @@ class kitti(imdb):
             ry = float(ry)
 
             height = float(height)
-            width = float(height)
-            length = float(height)
+            width = float(width)
+            length = float(length)
 
             cls = self._class_to_ind[class_name]
             self._class_statics[class_name]['num'] += 1
