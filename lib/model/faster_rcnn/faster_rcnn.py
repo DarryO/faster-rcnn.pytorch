@@ -15,6 +15,7 @@ class _fasterRCNN(nn.Module):
     """ faster RCNN """
     def __init__(self, classes, class_agnostic):
         super(_fasterRCNN, self).__init__()
+        print(classes)
         self.classes = classes
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
@@ -50,6 +51,7 @@ class _fasterRCNN(nn.Module):
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
+            print(roi_data)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
             rois_label = Variable(rois_label.view(-1).long())
@@ -65,8 +67,11 @@ class _fasterRCNN(nn.Module):
             rpn_loss_bbox = 0
 
         rois = Variable(rois)
+        print(rois)
+        exit()
         # do roi pooling based on predicted rois
 
+        # ROI feature
         if cfg.POOLING_MODE == 'align':
             pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
