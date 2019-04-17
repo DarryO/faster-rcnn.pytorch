@@ -10,10 +10,12 @@ import os
 # import PIL
 import numpy as np
 import scipy.sparse
+import pprint
 import uuid
 import pickle
 from .imdb import imdb
 from model.utils.config import cfg
+pp = pprint.PrettyPrinter().pprint
 
 
 try:
@@ -25,6 +27,7 @@ except NameError:
 class kitti(imdb):
     def __init__(self, image_set):
         imdb.__init__(self, 'kitti_{}'.format(image_set))
+        self._mean_dim = None
         self._image_set = image_set
         self._data_path = self._get_default_path()
         self._classes = ('__background__',  # always index 0
@@ -40,6 +43,14 @@ class kitti(imdb):
         self._roidb_handler = self.gt_roidb
         self._salt = str(uuid.uuid4())
         self._comp_id = 'comp4'
+        self._class_statics = {}
+        for cls in self._classes:
+            self._class_statics[cls] = {
+                    'num': 0,
+                    'mean_height': 0.0,
+                    'mean_width': 0.0,
+                    'mean_length': 0.0,
+                    'mean_ground': 0.0}
 
         # PASCAL specific config options
         self.config = {'cleanup': True,
@@ -98,19 +109,22 @@ class kitti(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
-        if os.path.exists(cache_file):
+        meta_cache_file = os.path.join(self.cache_path, self.name + '_gt_meta.pkl')
+        if os.path.exists(cache_file) and os.path.exists(meta_cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = pickle.load(fid)
+            with open(meta_cache_file, 'rb') as fid:
+                self._class_statics = pickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
-            return roidb
+        else:
+            roidb = [self._load_kitti_annotation(img_path) for img_path in self._image_index]
+            with open(cache_file, 'wb') as fid:
+                pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
+            with open(meta_cache_file, 'wb') as fid:
+                pickle.dump(self._class_statics, fid, pickle.HIGHEST_PROTOCOL)
+            print('wrote gt roidb to {}'.format(cache_file))
+        return roidb
 
-        gt_roidb = [self._load_kitti_annotation(img_path)
-                    for img_path in self._image_index]
-        with open(cache_file, 'wb') as fid:
-            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
-
-        return gt_roidb
 
     def rpn_roidb(self):
         if self._image_set != 'val':
@@ -157,7 +171,7 @@ class kitti(imdb):
         for ix, obj in enumerate(objs):
             (class_name, truncated, occluded, alpha,
              left, top, right, bottom, height, width, length, cx, cy, cz, ry) = obj.split()
-
+            class_name = class_name.lower().strip()
             # Make pixel indexes 0-based
             x1 = float(left)
             y1 = float(top)
@@ -178,7 +192,15 @@ class kitti(imdb):
             width = float(height)
             length = float(height)
 
-            cls = self._class_to_ind[class_name.lower().strip()]
+            cls = self._class_to_ind[class_name]
+            self._class_statics[class_name]['num'] += 1
+            self._class_statics[class_name]['mean_height'] += height
+            self._class_statics[class_name]['mean_width'] += width
+            self._class_statics[class_name]['mean_length'] += length
+            # not exact
+            # cy is the height of camera center
+            self._class_statics[class_name]['mean_ground'] += cy - (height / 2.0)
+
             boxes[ix, :] = [x1, y1, x2, y2]
             locations[ix, :] = [cx, cy, cz]
             dimensions[ix, :] = [height, width, length]

@@ -15,7 +15,7 @@ class _fasterRCNN(nn.Module):
     """ faster RCNN """
     def __init__(self, classes, class_agnostic):
         super(_fasterRCNN, self).__init__()
-        print(classes)
+        self.mean_dim = None
         self.classes = classes
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
@@ -151,3 +151,6 @@ class _fasterRCNN(nn.Module):
     def create_architecture(self):
         self._init_modules()
         self._init_weights()
+
+    def set_meta_data(self, mean_dim=None):
+        self.mean_dim = mean_dim

@@ -8,6 +8,7 @@ import numpy as np
 from model.utils.config import cfg
 from datasets.factory import get_imdb
 import PIL
+import pickle
 import pdb
 
 

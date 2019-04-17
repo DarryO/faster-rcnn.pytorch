@@ -14,6 +14,7 @@ import numpy as np
 import argparse
 import pprint
 import pdb
+import pickle
 import time
 
 import torch
@@ -149,6 +150,32 @@ class sampler(Sampler):
         return self.num_data
 
 
+def load_meta_data(cache_path, name, classes, num_classes):
+    meta_cache_file = os.path.join(cache_path, name + '_gt_meta.pkl')
+    with open(meta_cache_file, 'rb') as fid:
+        class_statics = pickle.load(fid)
+    class_to_ind = dict(zip(classes, range(num_classes)))
+    mean_dim = np.zeros((len(classes), 3), dtype=np.float32)
+    for cls in class_statics.keys():
+        cid = class_to_ind[cls]
+        if class_statics[cls]['num'] == 0:
+            mean_height = 0
+            mean_width = 0
+            mean_length = 0
+            mean_ground = 0
+        else:
+            mean_height = class_statics[cls]['mean_height'] / class_statics[cls]['num']
+            mean_width = class_statics[cls]['mean_width'] / class_statics[cls]['num']
+            mean_length = class_statics[cls]['mean_length'] / class_statics[cls]['num']
+            mean_ground = class_statics[cls]['mean_ground'] / class_statics[cls]['num']
+        class_statics[cls]['mean_height'] = mean_height
+        class_statics[cls]['mean_width'] = mean_width
+        class_statics[cls]['mean_length'] = mean_length
+        class_statics[cls]['mean_ground'] = mean_ground
+        mean_dim[cid, 0:3] = [mean_height, mean_width, mean_length]
+    return mean_dim
+
+
 if __name__ == '__main__':
 
     args = parse_args()
@@ -239,6 +266,8 @@ if __name__ == '__main__':
     im_info = torch.FloatTensor(1)
     num_boxes = torch.LongTensor(1)
     gt_boxes = torch.FloatTensor(1)
+    mean_dim = load_meta_data(imdb.cache_path, imdb.name, imdb.classes, imdb.num_classes)
+    mean_dim = torch.FloatTensor(mean_dim)
 
     # ship to cuda
     if args.cuda:
@@ -246,6 +275,7 @@ if __name__ == '__main__':
         im_info = im_info.cuda()
         num_boxes = num_boxes.cuda()
         gt_boxes = gt_boxes.cuda()
+        mean_dim = mean_dim.cuda()
 
     # make variable
     # im_data: [batch, channel, height, width]
@@ -257,6 +287,9 @@ if __name__ == '__main__':
     num_boxes = Variable(num_boxes)
     # gt_boxes: [batch, MAX_NUM_GTBOX, 5] (x1, y1, x2, y2, cls)
     gt_boxes = Variable(gt_boxes)
+
+    mean_dim = Variable(mean_dim)
+    # mean_dim.data.resize_(m_dim.shape).copy_(torch.FloatTensor(m_dim))
 
     if args.cuda:
         cfg.CUDA = True
@@ -275,6 +308,7 @@ if __name__ == '__main__':
         pdb.set_trace()
 
     fasterRCNN.create_architecture()
+    fasterRCNN.set_meta_data(mean_dim)
 
     lr = cfg.TRAIN.LEARNING_RATE
     lr = args.lr
