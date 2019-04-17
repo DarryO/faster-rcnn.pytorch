@@ -144,6 +144,11 @@ class kitti(imdb):
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+
+        locations = np.zeros((num_objs, 3), dtype=np.float32)
+        dimensions = np.zeros((num_objs, 3), dtype=np.float32)
+        gt_alphas = np.zeros((num_objs), dtype=np.float32)
+        gt_rys = np.zeros((num_objs), dtype=np.float32)
         # "Seg" area for pascal is just the box area
         seg_areas = np.zeros((num_objs), dtype=np.float32)
         ishards = np.zeros((num_objs), dtype=np.int32)
@@ -151,7 +156,7 @@ class kitti(imdb):
         # Load object bounding boxes into a data frame.
         for ix, obj in enumerate(objs):
             (class_name, truncated, occluded, alpha,
-             left, top, right, bottom, height, width, length, x, y, z, ry) = obj.split()
+             left, top, right, bottom, height, width, length, cx, cy, cz, ry) = obj.split()
 
             # Make pixel indexes 0-based
             x1 = float(left)
@@ -162,8 +167,23 @@ class kitti(imdb):
             difficult = 0 if diffc is None else int(float(diffc))
             ishards[ix] = difficult
 
+            cx = float(cx)
+            cy = float(cy)
+            cz = float(cz)
+
+            alpha = float(alpha)
+            ry = float(ry)
+
+            height = float(height)
+            width = float(height)
+            length = float(height)
+
             cls = self._class_to_ind[class_name.lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
+            locations[ix, :] = [cx, cy, cz]
+            dimensions[ix, :] = [height, width, length]
+            gt_alphas[ix] = alpha
+            gt_rys[ix] = ry
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
             seg_areas[ix] = (x2 - x1 + 1) * (y2 - y1 + 1)
@@ -173,6 +193,10 @@ class kitti(imdb):
         return {'boxes': boxes,
                 'gt_classes': gt_classes,
                 'gt_ishard': ishards,
+                'locations': locations,
+                'dimensions': dimensions,
+                'gt_alphas': gt_alphas,
+                'gt_rys': gt_rys,
                 'gt_overlaps': overlaps,
                 'flipped': False,
                 'seg_areas': seg_areas}

@@ -152,6 +152,7 @@ class sampler(Sampler):
 if __name__ == '__main__':
 
     args = parse_args()
+    assert args.disable_flip, "not support"
 
     print('Called with args:')
     print(args)

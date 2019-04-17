@@ -58,6 +58,7 @@ def rank_roidb_ratio(roidb):
         ratio = width / float(height)
 
         roidb[i]['need_crop'] = 0
+        # TODO(Hao Li, 2019-04-17): todo
         # if ratio > ratio_large:
         #     roidb[i]['need_crop'] = 1
         #     ratio = ratio_large

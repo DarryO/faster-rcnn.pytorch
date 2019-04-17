@@ -46,12 +46,13 @@ class _fasterRCNN(nn.Module):
 
         # feed base feature map tp RPN to obtain rois
         # rois: [batch_size, RPN_POST_NMS_TOP_N, 5] (batch_index, x, y, x, y)
-        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
+        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
+                base_feat, im_info, gt_boxes[:, :, :5] if gt_boxes.dim == 3 else gt_boxes[:, :5], num_boxes)
 
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
-            roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
-            print(roi_data)
+            roi_data = self.RCNN_proposal_target(
+                    rois, gt_boxes[:, :, :5] if gt_boxes.dim == 3 else gt_boxes[:, :5], num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
             rois_label = Variable(rois_label.view(-1).long())
@@ -67,8 +68,6 @@ class _fasterRCNN(nn.Module):
             rpn_loss_bbox = 0
 
         rois = Variable(rois)
-        print(rois)
-        exit()
         # do roi pooling based on predicted rois
 
         # ROI feature
@@ -82,16 +81,28 @@ class _fasterRCNN(nn.Module):
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
+        dim_offset_pred = self.RCNN_dim_offset_pred(pooled_feat)
+        loc_offset_pred = self.RCNN_loc_offset_pred(pooled_feat)
+
+        def target_select(all_class_pred, label, num_feat):
+            all_class_view = all_class_pred.view(all_class_pred.size(0), int(all_class_pred.size(1) / num_feat), num_feat)
+            target_pred_select = torch.gather(all_class_view, 1, label.view(label.size(0), 1, 1).expand(label.size(0), 1, num_feat))
+            target_pred = target_pred_select.squeeze(1)
+            return target_pred
+
         # if class_agnostic is True, then
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
-            bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
-            bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
-            bbox_pred = bbox_pred_select.squeeze(1)
+            bbox_pred = target_select(bbox_pred, rois_label, 4)
+            dim_offset_pred = target_select(dim_offset_pred, rois_label, 3)
+            loc_offset_pred = target_select(loc_offset_pred, rois_label, 3)
 
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
+
+        alpha_pred = self.RCNN_alpha_pred(pooled_feat)
+        ry_pred = self.RCNN_ry_pred(pooled_feat)
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
@@ -126,6 +137,11 @@ class _fasterRCNN(nn.Module):
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+
+        normal_init(self.RCNN_dim_offset_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_loc_offset_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_alpha_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_ry_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

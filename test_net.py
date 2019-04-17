@@ -175,7 +175,7 @@ if __name__ == '__main__':
 
     print("load checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
-    fasterRCNN.load_state_dict(checkpoint['model'])
+    fasterRCNN.load_state_dict(checkpoint['model'], strict=False)
     if 'pooling_mode' in checkpoint.keys():
         cfg.POOLING_MODE = checkpoint['pooling_mode']
 
