@@ -35,7 +35,12 @@ class _fasterRCNN(nn.Module):
         # im_info: [batch, 3] (height, width, scale)
         # num_boxes: [batch]
         # gt_boxes: [batch, MAX_NUM_GTBOX, 5] (x1, y1, x2, y2, cls)
+        # gt_boxes: [batch, MAX_NUM_GTBOX, 13] (x1, y1, x2, y2, cls, cx, cy, cz, height, width, length, alpha, ry)
         batch_size = im_data.size(0)
+        if gt_boxes.dim() == 2:
+            gt_boxes = gt_boxes[:, :5]
+        else:
+            gt_boxes = gt_boxes[:, :, :5]
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
@@ -47,12 +52,12 @@ class _fasterRCNN(nn.Module):
         # feed base feature map tp RPN to obtain rois
         # rois: [batch_size, RPN_POST_NMS_TOP_N, 5] (batch_index, x, y, x, y)
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
-                base_feat, im_info, gt_boxes[:, :, :5] if gt_boxes.dim == 3 else gt_boxes[:, :5], num_boxes)
+                base_feat, im_info, gt_boxes, num_boxes)
 
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(
-                    rois, gt_boxes[:, :, :5] if gt_boxes.dim == 3 else gt_boxes[:, :5], num_boxes)
+                    rois, gt_boxes, num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
             rois_label = Variable(rois_label.view(-1).long())

@@ -16,6 +16,7 @@ import torchvision.models as models
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
 import pdb
 
+
 class vgg16(_fasterRCNN):
     def __init__(self, classes, pretrained=False, class_agnostic=False):
         self.model_path = 'data/pretrained_model/vgg16_caffe.pth'
@@ -30,9 +31,7 @@ class vgg16(_fasterRCNN):
         if self.pretrained:
             print("Loading pretrained weights from %s" % (self.model_path))
             state_dict = torch.load(self.model_path)
-            print("111")
             vgg.load_state_dict({k: v for k, v in state_dict.items() if k in vgg.state_dict()}, strict=False)
-            print("111")
 
         # not using the last Linear layer: in 4096, out 1000
         vgg.classifier = nn.Sequential(*list(vgg.classifier._modules.values())[:-1])
